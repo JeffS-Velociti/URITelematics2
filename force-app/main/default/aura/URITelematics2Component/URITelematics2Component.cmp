@@ -1,0 +1,508 @@
+<aura:component controller="URITelematics2ComponentController" >
+    <aura:attribute name="vehicle" type="Vehicles__c" default="{'sObjectType':'Vehicles__c'}" access="PUBLIC"/>
+    <aura:attribute name="assetMaster" type="Fleet_Maintenance__c" default="{'sObjectType':'Fleet_Maintenance__c','Controller_Type__c':''}" access="PUBLIC"/>
+
+    <aura:attribute name="recordId" type="Id" access="PUBLIC" default=""/>
+    <aura:attribute name="woId" type="Id" access="PUBLIC" default=""/>
+    <aura:attribute name="conId" type="String" access="PUBLIC"/>
+    <aura:attribute name="stage" type="String" access="PUBLIC" default="0"/>
+    <aura:attribute name="showNext" type="Boolean" access="PUBLIC" default="false"/>
+    <aura:attribute name="ServiceType" type="String" access="PUBLIC" default=""/>
+    <aura:attribute name="isLoading" type="Boolean" access="PUBLIC" default="false"/>
+    <aura:attribute name="vechActivated" type="Boolean" access="public" default="false" />
+    <aura:attribute name="showHelpText" type="Boolean" access="public" default="false" />
+    <aura:attribute name="picklistWrapper" type="List" access="PUBLIC" default="[]"/>
+    <aura:attribute name="confirmMsg" type="String" access="PUBLIC" default=""/>
+    <aura:attribute name="modalContent" type="String" access="PUBLIC" default=""/>
+    
+    <aura:attribute name="requiredIds" type="String" access="PUBLIC" default=""/>
+    <aura:attribute name="optionalIds" type="String" access="PUBLIC" default=""/>
+    <aura:attribute name="showDynamicImages" type="Boolean" access="PUBLIC" default=""/>
+    <aura:attribute name="zscpList" type="List" access="PUBLIC" default="[]"/>
+    <!--aura:attribute name="controllerTypeList" type="List" access="PUBLIC" default="[]"/-->
+    <aura:attribute name="fuelModuleList" type="List" access="PUBLIC" default="[]"/>
+    <aura:attribute name="urPartsList" type="List" access="PUBLIC" default="[]"/>
+    <aura:attribute name="parentBom" type="Map" access="PUBLIC" default="{}"/>
+    <aura:attribute name="bomModal" type="Boolean" access="PUBLIC" default="false"/>
+    <aura:attribute name="fuelModuleOriginalList" type="List" access="PUBLIC" default="[]"/>
+    <aura:attribute name="zscp" type="String" access="PUBLIC" default=""/>
+    <aura:attribute name="packageUpdate" type="Boolean" access="PUBLIC" default="false"/>
+    <aura:handler name="init" action="{!c.doInit}" value="{!this}"/>
+    <aura:attribute name="TestAgainError" type="Boolean" access="PUBLIC" default="false"/>
+    <aura:attribute name="TotalTime" type="Integer" access="PUBLIC" default="0"/>
+    <aura:attribute name="replacement3G" type="boolean" access="PUBLIC" default="false"/>
+    <!--aura:attribute name="typesOfPartsUsed" type="List" access="PUBLIC"/>
+    <aura:attribute name="searchSOLIList" type="List" default="[]"/-->
+    
+    <aura:registerEvent name="logout" type="c:logoutEvent" />
+    <aura:handler name="fieldLevelValidation" event="c:fieldLevelValidationEvent" action="{!c.saveVehicleOnImageLoad}"/>
+    <aura:registerEvent name="barcodeEvt" type="c:barcodeEvent1" />
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <aura:if isTrue="{!v.isLoading}">
+        <div class="slds-spinner_container slds-is-fixed">
+            <lightning:spinner variant="brand" alternativeText="Loading" />
+        </div>
+    </aura:if>
+    
+    
+    <div aura:id="URIcmp" class="slds-hide">
+        <div>
+            <c:SubaruToastCom aura:Id = "showToastcmp" />
+        </div>
+        <div class="slds-card slds-m-around_small" style="background-color:#f4f6f9;"> 
+            <div class="slds-card__header slds-grid">
+                <h6 class="slds-align_absolute-center slds-section-title section-group--is-open">
+                    United Rentals<br/>
+                    {!v.vehicle.Name}<br/>
+                    {!v.ServiceType}
+                    <aura:if isTrue="{!or(v.stage == '2',v.stage == '3')}">
+                        <br/>{!v.vehicle.DSNSerial__c}
+                    </aura:if>
+                </h6> 
+                <div>
+                    <lightning:button label="logout" name="logout" onclick="{!c.logout}"/>
+                </div>
+                
+            </div>
+        </div>
+        
+        <aura:if isTrue="{!(v.stage == '1')}">
+            
+            <lightning:layout multipleRows ="true" >
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <lightning:select name="EquipmentOperates" label="Equipment Operates?" required="true" value="{!v.vehicle.Power_On__c}">
+                        <aura:iteration items="{!v.picklistWrapper}" var="item">
+                            <aura:if isTrue="{!item.fieldName == 'Power_On__c'}">
+                                <option value="">choose one...</option>
+                                <aura:iteration items="{!item.pickListValues}" var="option">
+                                    <option value="{!option}">{!option}</option>
+                                </aura:iteration>
+                            </aura:if>
+                        </aura:iteration>
+                    </lightning:select>
+                </lightning:layoutItem>
+                
+                
+                <aura:if isTrue="{!(v.vehicle.Power_On__c == 'Yes')}">
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <c:ImageSectionCom aura:id="ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Equipement Number (Clear and Close)" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}" /> 
+                        
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <c:ImageSectionCom aura:id="ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Pre-Service Wiring Harness Check" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}" /> 
+                        
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <c:ImageSectionCom aura:id="ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Positive Wiring Harness Test" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}" /> 
+                        
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <lightning:select aura:id = "required" name="ExtHarness" label="Did you utilize a new wire harness from your inventory to complete the telematics service" required="true" value="{!v.vehicle.Ext_Harness__c}">
+                            <aura:iteration items="{!v.picklistWrapper}" var="item">
+                                <aura:if isTrue="{!item.fieldName == 'Ext_Harness__c'}">
+                                    <option value="">choose one...</option>
+                                    <aura:iteration items="{!item.pickListValues}" var="option">
+                                        <option value="{!option}">{!option}</option>
+                                    </aura:iteration>
+                                </aura:if>
+                            </aura:iteration>
+                        </lightning:select>
+                        
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <Lightning:input aura:id = "required" name="engineHours" label="Engine Hours" type="Number" step="0.01" formatter ="decimal" value="{!v.vehicle.Engine_Hours__c}" required="true" /> 
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <c:ImageSectionCom aura:id="ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Engine Hour Meter" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}" /> 
+                    </lightning:layoutItem>
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <c:ImageSectionCom aura:id="ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Device Serial Number" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}" /> 
+                    </lightning:layoutItem>
+                    
+                    <aura:if isTrue="{!v.replacement3G}">
+                        <aura:if isTrue="{!(v.vehicle.RDSNSerialHasBarcode == false)}">
+                            <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                <Lightning:input aura:id = "required" name="RDeviceSerialNumber" label="Removed 3G Device Serial Number" type="Text" value="{!v.vehicle.Removed_Device_Serial_Number__c}" required="true" /> 
+                            </lightning:layoutItem>
+                            <aura:set attribute="else">
+                                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="6" mediumDeviceSize ="11" largeDeviceSize ="11">
+                                    <Lightning:input aura:id = "required" name="RDeviceSerialNumber" label="Removed 3G Device Serial Number" type="Text" value="{!v.vehicle.Removed_Device_Serial_Number__c}" required="true" /> 
+                                </lightning:layoutItem>
+                                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="5" mediumDeviceSize ="1" largeDeviceSize ="1">
+                                    <br/>
+                                    <img src="{!$Resource.Barcode_icon}" data-att="RDSN" style="width: 45px;" onclick="{!c.barcodeScan}"/>
+                                </lightning:layoutItem>
+                            </aura:set>
+                        </aura:if>
+                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                            <c:ImageSectionCom aura:id="ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Removed 3G Device Serial Number" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}"  /> 
+                        </lightning:layoutItem>
+                    </aura:if>
+                    
+                    <aura:if isTrue="{!(v.vehicle.DSNSerialHasBarcode == false)}">
+                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                            <Lightning:input aura:id = "DeviceSerialNumber" name="DeviceSerialNumber" label="Device Serial Number" type="Text" value="{!v.vehicle.DSNSerial__c}" required="true" /> 
+                        </lightning:layoutItem>
+                        <aura:set attribute="else">
+                            <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="6" mediumDeviceSize ="11" largeDeviceSize ="11">
+                                <Lightning:input aura:id = "DeviceSerialNumber" name="DeviceSerialNumber" label="Device Serial Number" type="Text" value="{!v.vehicle.DSNSerial__c}" required="true" /> 
+                            </lightning:layoutItem>
+                            <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="5" mediumDeviceSize ="1" largeDeviceSize ="1">
+                                <br/>
+                                <img src="{!$Resource.Barcode_icon}" data-att="DSN" style="width: 45px;" onclick="{!c.barcodeScan}"/>
+                            </lightning:layoutItem>
+                        </aura:set>
+                    </aura:if>
+                    
+                    <aura:if isTrue="{!v.vehicle.Service_Type__c == 'Smart Control'}">
+                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                            <lightning:select aura:id = "required" name="zscp" label="ZTR Smart Control Package" required="true" value="{!v.zscp}" onchange="{!c.setFuels}">
+                                <option value="">-- None --</option>
+                                <aura:iteration items="{!v.zscpList}" var="option">
+                                    <option value="{!option.value}">{!option.label}</option>
+                                </aura:iteration>
+                            </lightning:select>
+                        </lightning:layoutItem>
+                        <!--lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                            <lightning:select aura:id = "required" name="contrlType" label="Controller Type" required="true" value="{!v.assetMaster.Controller_Type__c}">
+                                <option value="">-None</option>
+                                <aura:iteration items="{!v.controllerTypeList}" var="option">
+                                    <option value="{!option}">{!option}</option>
+                                </aura:iteration>
+                            </lightning:select>
+                        </lightning:layoutItem-->
+                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                            <lightning:select name="FueLModule" label="Fuel Module" value="{!v.assetMaster.Fuel_Module__c}" disabled ="{!empty(v.zscp)}">
+                                <option value="">-- None --</option>
+                                <aura:iteration items="{!v.fuelModuleList}" var="option">
+                                    <option value="{!option}">{!option}</option>
+                                </aura:iteration>
+                            </lightning:select>
+                        </lightning:layoutItem>
+                        
+                    </aura:if>
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <div class="slds-align_absolute-center">
+                            <Lightning:button variant="brand" name="Back" label="Back" onclick="{!c.goBack}"/>
+                            <!--Lightning:button variant="brand" name="Next" label="Next" onclick="{!c.validateVehicle}"/-->
+                            <Lightning:button variant="brand" name="ActivateTelematicsDevice" label="Activate Telematics Device" onclick="{!c.validateVehicle}"/><br/>
+                            
+                        </div>
+                    </lightning:layoutItem>
+                    
+                    
+                    <aura:set attribute="else">
+                        <aura:if isTrue="{!(v.vehicle.Power_On__c == 'No')}">
+                            <lightning:layout multipleRows ="true">
+                                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                    <p class="notifyText">Notify your branch contact the equipment is inoperable and Select "Next" to move the next equipment.</p>
+                                </lightning:layoutItem>
+                                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                    <Lightning:button variant="brand" name="Back" label="Back" onclick="{!c.goBack}"/>
+                                    <Lightning:button variant="brand" name="Next" label="Next" onclick="{!c.saveVehicles}"/>
+                                    
+                                </lightning:layoutItem>
+                            </lightning:layout>
+                        </aura:if>
+                    </aura:set>
+                </aura:if>
+                
+            </lightning:layout>
+        </aura:if>
+        
+        <aura:if isTrue="{!(v.stage == '2')}">
+            <lightning:layout multipleRows ="true">
+                <aura:if isTrue="{!v.vehicle.Parts_Used_List__c}">
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <!--c:PartsUsedCmp aura:id="partsUsed" vehicle="{!v.vehicle}" typesOfPartsUsed ="{!v.typesOfPartsUsed}" searchSOLIList="{!v.searchSOLIList}"/-->
+                        <Lightning:layoutItem padding="around-small" size="12" smallDeviceSize="12" mediumDeviceSize="12" largeDeviceSize="10">
+                            <Lightning:button label="Parts Used" value="Parts Used" onclick="{!c.EnterPartsUsedCall}" variant="brand"/>
+                        </Lightning:layoutItem>
+                    </lightning:layoutItem>
+                </aura:if>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <c:ImageSectionCom aura:id="stage2ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Black Box Placement" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}"  /> 
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <c:ImageSectionCom aura:id="stage2ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Power Connection" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}"  /> 
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <c:ImageSectionCom aura:id="stage2ImageCmp" DynamicImagesList = "[]" attachmentNameList= "Ground Connection" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}"  /> 
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <c:ImageSectionCom aura:id="stage2ImageCmp" DynamicImagesList = "[]" attachmentNameList= "White Wire Connection" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}" /> 
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <c:ImageSectionCom aura:id="stage2ImageCmpOptional" DynamicImagesList = "[]" attachmentNameList= "Blue Wire Connection" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}"  /> 
+                </lightning:layoutItem>
+                <aura:if isTrue="{!v.showDynamicImages}">
+                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                        <c:URIphvacSmartControlComponent requiredIds = "{!v.requiredIds}" optionalIds="{!v.optionalIds}" aura:Id="uriGenericImages" ParentId="{!v.recordId}" recordName="{!v.vehicle.Name}"/>
+                    </lightning:layoutItem>
+                </aura:if>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <c:ImageSectionCom aura:id="stage2ImageCmpOptional" DynamicImagesList = "['Other']" attachmentNameList= "Other" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}"  /> 
+                </lightning:layoutItem> 
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <lightning:textarea required = "true" aura:id = "required" name="Service Notes" label="Brief Explanation of Service" placeholder="Brief Explanation of Service" value="{!v.vehicle.Service_Activities__c}"/>
+                </lightning:layoutItem>
+                <aura:iteration items="{!v.picklistWrapper}" var="item">
+                    <aura:if isTrue="{!item.fieldName == 'Confirmed_Device_LEDs_ON__c'}">
+                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                            <lightning:select aura:id = "required" name="Confirmed_Device_LEDs_ON" label="Confirmed Device LEDs ON" required="true" value="{!v.vehicle.Confirmed_Device_LEDs_ON__c}">
+                                <option value="">choose one...</option>
+                                <aura:iteration items="{!item.pickListValues}" var="option">
+                                    <option value="{!option}">{!option}</option>
+                                </aura:iteration>
+                            </lightning:select>
+                        </lightning:layoutItem>
+                        <aura:set attribute="else">
+                            <aura:if isTrue="{!item.fieldName == 'Confirmed_Device_Reporting__c'}">
+                                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                    <lightning:select aura:id = "required" name="Confirmed_Device_Reporting" label="Confirmed Device Reporting" required="true" value="{!v.vehicle.Confirmed_Device_Reporting__c}">
+                                        <option value="">choose one...</option>
+                                        <aura:iteration items="{!item.pickListValues}" var="option">
+                                            <option value="{!option}">{!option}</option>
+                                        </aura:iteration>
+                                    </lightning:select>
+                                </lightning:layoutItem>
+                                <aura:set attribute="else">
+                                    <aura:if isTrue="{!item.fieldName == 'Symptom_Code__c'}">
+                                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                            <lightning:select aura:id = "required" name="Symptom_Code" label="Failure Reason" required="true" value="{!v.vehicle.Symptom_Code__c}">
+                                                <aura:if isTrue="{!item.fieldName == 'Symptom_Code__c'}">
+                                                    <option value="">choose one...</option>
+                                                    <aura:iteration items="{!item.pickListValues}" var="option">
+                                                        <option value="{!option}">{!option}</option>
+                                                    </aura:iteration>
+                                                </aura:if>
+                                            </lightning:select>
+                                        </lightning:layoutItem>
+                                        <aura:set attribute="else">
+                                            <aura:if isTrue="{!item.fieldName == 'Rewired__c'}">
+                                                <aura:if isTrue="{!v.replacement3G}">
+                                                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                                        <lightning:select aura:id = "required" name="Rewired" label="Harness" required="true" value="{!v.vehicle.Rewired__c}">
+                                                            <option value="">choose one...</option>
+                                                            <aura:iteration items="{!item.pickListValues}" var="option">
+                                                                <option value="{!option}">{!option}</option>
+                                                            </aura:iteration>
+                                                        </lightning:select>
+                                                    </lightning:layoutItem>
+                                                </aura:if>
+                                            </aura:if>
+                                        </aura:set>
+                                    </aura:if>
+                                </aura:set>
+                            </aura:if>
+                        </aura:set>
+                    </aura:if>
+                </aura:iteration>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <lightning:textarea required = "true" aura:id = "required" name="additionalComments" label="Additional Comments" placeholder="Additional Comments" value="{!v.vehicle.Post_Install_Notes__c}"/>
+                </lightning:layoutItem>
+                <!--lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <lightning:input required = "true" aura:id = "required" name="Labor_In_Minutes" label="Labor Time (In Mintues)" placeholder="Labor Time" value="{!v.vehicle.Labor_In_Minutes__c}" type="number"/>
+                </lightning:layoutItem-->
+                <!--lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <lightning:input name="Locating Equipment (In Minutes)" required = "true" aura:id = "required" label="Locating Equipment (In Minutes)" placeholder="" value="{!v.vehicle.Locating_Equipment_In_Minutes__c}" type="number" onchange="{!c.calculateTotalTime}"/>
+                </lightning:layoutItem-->
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <lightning:input name="Equipment Service Time (In Minutes)" required = "true" aura:id = "required" label="Equipment Service Time (In Minutes)" placeholder="" value="{!v.vehicle.Equipment_Service_Time_In_Minutes__c}" type="number" onchange="{!c.calculateTotalTime}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <lightning:input name="Telematics Device Activation (In Minutes)" required = "true" aura:id = "required" label="Telematics Device Activation (In Minutes)" placeholder="" value="{!v.vehicle.Telematics_Device_Activation_In_Minutes__c}" type="number" onchange="{!c.calculateTotalTime}"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="8">
+                    <lightning:input name="Total Time" label="Total Time" placeholder="Total Time" value="{!v.TotalTime}" type="number"  disabled="true"/>
+                </lightning:layoutItem>
+                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                    <lightning:button label="Complete Service" variant="brand" title="Complete Service" onclick="{! c.CompleteService }"/>
+                </lightning:layoutItem>
+            </lightning:layout>        
+        </aura:if>
+        <div class="slds-hide" aura:id = "cfmodal" style="height: 640px;">
+            <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_large">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                        
+                        <!--h2 class="slds-text-heading_medium slds-hyphenate">Modal Header</h2-->
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" >
+                        <p style="font-size: 14px;">{!v.modalContent}</p>
+                        <aura:if isTrue="{!v.confirmMsg == 'New Device Number'}">
+                            <lightning:layout multipleRows ="true">
+                                
+                                <aura:if isTrue="{!(v.vehicle.DSNSerialHasBarcode == false)}">
+                                    <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                        <lightning:input aura:id = "NewDeviceSerialNumber" name="NewDeviceSerialNumber" label="New Device Serial Number" type="Text" value="{!v.vehicle.DSNSerial__c}" required="true" /> 
+                                    </lightning:layoutItem>
+                                    <aura:set attribute="else">
+                                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="6" mediumDeviceSize ="7" largeDeviceSize ="11">
+                                            <lightning:input aura:id = "NewDeviceSerialNumber" name="NewDeviceSerialNumber" label="New Device Serial Number" type="Text" value="{!v.vehicle.DSNSerial__c}" required="true" />
+                                        </lightning:layoutItem>
+                                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="5" mediumDeviceSize ="5" largeDeviceSize ="1">
+                                            <br/>
+                                            <img src="{!$Resource.Barcode_icon}" data-att="DSN" style="width: 45px;" onclick="{!c.barcodeScan}"/>
+                                        </lightning:layoutItem>
+                                    </aura:set>
+                                </aura:if>                                
+                                <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                    <c:ImageSectionCom aura:id="SNImage" DynamicImagesList = "[]" attachmentNameList= "New Device Serial Number" parentId = "{!v.recordId}" recordName = "{!v.vehicle.Name}" contactId="{!v.conId}"  /> 
+                                    
+                                </lightning:layoutItem>
+                            </lightning:layout>
+                            <aura:set attribute="else">
+                                <aura:if isTrue="{!v.confirmMsg =='show existing location'}">
+                                    <lightning:layout multipleRows ="true">
+                                        <lightning:layoutItem padding="around-small" size="12" smallDeviceSize ="12" mediumDeviceSize ="12" largeDeviceSize ="12">
+                                            <lightning:select name="select1" label="Installation Environment" required="true" value="{!v.vehicle.Use_Existing_Location__c}" aura:id="existinglocation">
+                                                <option value="">choose one...</option>
+                                                <option value="Outside">Outside</option>
+                                                <option value="Inside Structure">Inside Structure</option>
+                                            </lightning:select>
+                                        </lightning:layoutItem>
+                                    </lightning:layout>
+                                </aura:if>
+                            </aura:set>
+                        </aura:if>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <aura:if isTrue="{!v.confirmMsg == 'Communicated False'}">
+                            <lightning:button label="Test Again" title="Test Again" onclick="{! c.closeModalTestAgain }"/>
+                            <lightning:button variant="brand" label="Deinstall Device" title="Deinstall Device" onclick="{!c.DeinstallDeviceFunc}" />
+                        </aura:if>
+                        <aura:if isTrue="{!or(v.confirmMsg == 'Run Hour True',v.confirmMsg == '404 Next Section')}">
+                            <lightning:button label="Ok" title="Ok" onclick="{! c.goNextStage }"/>
+                            
+                        </aura:if>
+                        <aura:if isTrue="{!v.confirmMsg == 'Equip Categaory True'}">
+                            <lightning:button label="Test Again" title="Test Again" onclick="{! c.closeModalTestAgainForM6AndM8 }"/>
+                            <lightning:button variant="brand" label="Deinstall Device" title="Deinstall Device" onclick="{!c.DeinstallDeviceFunc}" />
+                        </aura:if>
+                        <aura:if isTrue="{!v.confirmMsg == 'Equip Categaory False'}">
+                            <lightning:button label="Test Again" title="Test Again" onclick="{! c.closeModalTestAgainForM6AndM8 }"/>
+                            <lightning:button label="Wire and Connections are good" title="Wire and Connections are good" onclick="{! c.ECFalseClose }"/>
+                            
+                        </aura:if>
+                        <aura:if isTrue="{!v.confirmMsg == 'New Device Number'}">
+                            <lightning:button label="Next" title="Next" onclick="{! c.previousPage }"/>
+                            
+                        </aura:if>
+                        <aura:if isTrue="{!or(v.confirmMsg == 'Device Serial Number Condition True',v.confirmMsg == 'Device Serial Number Condition False')}">
+                            <lightning:button label="Accept &amp; Continue" title="Accept Continue" onclick="{!c.acceptAndContinue}"/>
+                            
+                        </aura:if>
+                        <aura:if isTrue="{!v.confirmMsg =='show existing location'}">
+                            <lightning:button label="Ok" title="Ok" onclick="{!c.useExistingLocation}"/>
+                        </aura:if>
+                        
+                        <aura:if isTrue="{!v.confirmMsg =='Inside Structure'}">
+                            <lightning:button label="Test GPS Again" title="Test GPS Again" onclick="{!c.call1537Again}"/>
+                            <lightning:button label="Deinstall Device" title="Deinstall Device" onclick="{!c.deinstall}"/>
+                        </aura:if>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </div>
+        
+        <div class="slds-hide" aura:id = "oapumodal" style="height: 640px;">
+            <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_large">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" >
+                        <aura:if isTrue="{!v.TestAgainError}">
+                            <p style="font-size: 14px;">
+                                "Over-the-Air Package Update" is NOT complete, please continue to run the Equipment and "Test" again later. 
+                            </p>
+                            <aura:set attribute="else">
+                                <p style="font-size: 14px;">The device requires an 'Over-the-Air Package Update'. Do Not power down the equipment or release it untill this process it complete.
+                                    Click "Over-the-Air Package Update" button to begin the process now.</p>
+                            </aura:set>
+                        </aura:if>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <aura:if isTrue="{!v.TestAgainError}">
+                            <lightning:button label="Ok" title="Ok" onclick="{! c.revokeToPrevious }"/>
+                            <aura:set attribute="else">
+                                <lightning:button label="Test" title="Test" onclick="{! c.newTest }"/>
+                                <lightning:button label="Over-the-Air Package Update" title="Over-the-Air Package Update" onclick="{! c.packageUpdate }" disabled="{!v.packageUpdate}"/>
+                                
+                            </aura:set>
+                        </aura:if>
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </div>
+        <div class="slds-hide" aura:id = "partsUsedModel" style="height: 640px;">
+            <section role="dialog" class="slds-modal slds-fade-in-open slds-modal_large">
+                <div class="slds-modal__container">
+                    <header class="slds-modal__header">
+                    </header>
+                    <div class="slds-modal__content slds-p-around_medium" >
+                        <aura:if isTrue="{!v.urPartsList.length>0}">
+                            <lightning:select aura:id = "urParts" name="UR Part BOM" label="UR Part BOM" required="true" value="{!v.vehicle.Parts_Used_List__c}">
+                                <option value="">choose one...</option>
+                                <aura:iteration items="{!v.urPartsList}" var="option">
+                                    <option value="{!option.BOM_ID__c}">{!option.Item_Master_BOM_Name__c}</option>
+                                </aura:iteration>
+                            </lightning:select>
+                        </aura:if>
+                    </div>
+                    <footer class="slds-modal__footer">
+                        <lightning:button label="Ok" title="Ok" onclick="{!c.closeURModal}"/>
+                        
+                    </footer>
+                </div>
+            </section>
+            <div class="slds-backdrop slds-backdrop_open"></div>
+        </div>
+        <aura:if isTrue="{!v.bomModal}">
+            <div aria-hidden="false" role="dialog" class="slds-modal slds-fade-in-open slds-backdrop slds-modal-backdrop--open" id="bomModal">
+                <div class="slds-modal__container">
+                    <div class="slds-modal__header">
+                        <h2 class="slds-text-heading--medium" style="font-weight: 300;font-size: 24px;line-height: 1.25;">
+                             Parts Used Listing
+                        </h2>
+                    </div>
+                    <div class="slds-modal__content" style="padding: 1rem;"> 
+                        <div>
+                            <Lightning:layout multipleRows="true">
+                                <Lightning:layoutItem size="12" smallDeviceSize="5" mediumDeviceSize="5" largeDeviceSize="5" class="centerAlign">
+                                    <span style="font-size:20px;">Name</span>
+                                </Lightning:layoutItem>
+                                <Lightning:layoutItem size="12" smallDeviceSize="5" mediumDeviceSize="5" largeDeviceSize="5" class="centerAlign">
+                                    <span style="font-size:20px;">Desc</span>
+                                </Lightning:layoutItem>
+                                <Lightning:layoutItem  size="12" smallDeviceSize="2" mediumDeviceSize="2" largeDeviceSize="2" class="centerAlign">
+                                    <span style="font-size:20px;">Qty</span>
+                                </Lightning:layoutItem>
+                                <aura:iteration items="{!v.parentBom.billofMaterialList}" var="billofMaterial">
+                                    <Lightning:layoutItem size="12" smallDeviceSize="5" mediumDeviceSize="5" largeDeviceSize="5" class="slds-input">
+                                        {!billofMaterial.bom.SCMC__Item__r.Name}
+                                    </Lightning:layoutItem>
+                                    <Lightning:layoutItem size="12" smallDeviceSize="5" mediumDeviceSize="5" largeDeviceSize="5"  class="slds-input">
+                                        {!billofMaterial.bom.SCMC__Item_Description__c}
+                                    </Lightning:layoutItem>
+                                    <Lightning:layoutItem size="12" smallDeviceSize="2" mediumDeviceSize="2" largeDeviceSize="2" >
+                                        <Lightning:input variant="label-hidden" name="qty" label="Qty" value="{!billofMaterial.quantity}"/>
+                                    </Lightning:layoutItem>
+                                </aura:iteration>
+                            </Lightning:layout>
+                        </div>
+                    </div>
+                    <div class="slds-modal__footer">
+                        <Lightning:button label="Save" value="Save" onclick="{!c.saveBOM}" variant="brand"/>
+                        <Lightning:button label="Cancel" value="Cancel" onclick="{!c.Cancel}" variant="brand"/>
+                    </div>
+                </div>
+            </div> 
+        </aura:if>
+    </div>
+    <c:toastComponent aura:id="toast"/>
+
+</aura:component>

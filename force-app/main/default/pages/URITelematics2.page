@@ -1,0 +1,47 @@
+<apex:page controller="URITelematicsComponentController" lightningStylesheets="true" standardStylesheets="false" sidebar="false" cache="false" showHeader="false" ><!--action="{!Verify}"-->
+    <script src="https://cdn.jsdelivr.net/npm/dynamsoft-javascript-barcode@7.2.2-v2/dist/dbr.js" data-productKeys="{!$Setup.Velociti_Settings__c.Barcode_Key__c}"></script>
+    <apex:slds />
+    <apex:includeLightning />
+    <apex:form >
+        <apex:actionFunction name="logout" action="{!logout}"/>
+    </apex:form>
+    <div id="lightning"></div>
+    <script>
+    var contactId = "{!contactId}";
+    console.log('contactId'+contactId);
+    $Lightning.use("c:URITelematics2App", function() {
+        $Lightning.createComponent("c:URITelematics2Component",
+                                   { 
+                                       conId : contactId
+                                   },
+                                   "lightning",
+                    function(cmp) { 
+                        $A.eventService.addHandler({ "event": "c:logoutEvent", "handler" : visualForceFunction});   
+                        $A.eventService.addHandler({ "event": "c:barcodeEvent1", "handler" : barcodeScan}); 
+                    });
+    });        
+     var visualForceFunction = function(event){
+            console.log('handled');
+            logout();
+            
+        };    
+     var barcodeScan = function(event){
+         	var fieldAPIName = event.getParam("fieldName"); 
+     		var barcodeScanner = null;
+            Dynamsoft.BarcodeScanner.createInstance({
+                onFrameRead: results => {},
+                onUnduplicatedRead: (txt, result) => {
+                    console.log('::::::::::::::',(txt.split('.'))[0]);
+                    var message = ((txt.split('.'))[0]) + ',' + fieldAPIName;
+                    parent.postMessage(message);
+                     setTimeout(function(){
+                        barcodeScanner.hide();
+                     }, 200);
+               }
+            }).then(scanner => {
+                barcodeScanner = scanner;
+                barcodeScanner.show();
+            });
+     }    
+    </script>
+</apex:page>
